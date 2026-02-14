@@ -215,6 +215,13 @@ export default function HostPage() {
     setAnswers([]);
   };
 
+  const handleNuke = async () => {
+    if (!confirm('Delete this entire game? Everyone will need to rejoin.')) return;
+    await resetGame(gameId);
+    await supabase.from('games').delete().eq('id', gameId);
+    window.location.href = '/';
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -305,6 +312,13 @@ export default function HostPage() {
             isHost
             onStart={handleStartGame}
           />
+
+          <button
+            onClick={handleNuke}
+            className="mt-4 text-xs text-foreground/20 hover:text-danger"
+          >
+            Delete game & start over
+          </button>
         </div>
       )}
 

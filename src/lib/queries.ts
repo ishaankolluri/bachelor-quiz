@@ -14,22 +14,20 @@ export async function createGame(code: string): Promise<Game> {
 }
 
 export async function getGameByCode(code: string): Promise<Game | null> {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('games')
     .select()
     .eq('code', code.toUpperCase())
-    .single();
-  if (error) return null;
+    .maybeSingle();
   return data;
 }
 
 export async function getGame(gameId: string): Promise<Game | null> {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('games')
     .select()
     .eq('id', gameId)
-    .single();
-  if (error) return null;
+    .maybeSingle();
   return data;
 }
 
@@ -122,13 +120,12 @@ export async function submitAnswer(playerId: string, questionId: string, answerT
 }
 
 export async function getPlayerAnswer(playerId: string, questionId: string): Promise<Answer | null> {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('answers')
     .select()
     .eq('player_id', playerId)
     .eq('question_id', questionId)
-    .single();
-  if (error) return null;
+    .maybeSingle();
   return data;
 }
 
