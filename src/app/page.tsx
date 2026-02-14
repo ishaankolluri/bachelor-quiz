@@ -33,8 +33,9 @@ export default function Home() {
       sessionStorage.setItem('playerId', player.id);
       sessionStorage.setItem('playerName', player.name);
       router.push(`/play/${game.id}`);
-    } catch {
-      setError('Something went wrong. Try again.');
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
       setLoading(false);
     }
   };
@@ -48,8 +49,9 @@ export default function Home() {
       const code = Math.random().toString(36).substring(2, 6).toUpperCase();
       const game = await createGame(code);
       router.push(`/host/${game.id}`);
-    } catch {
-      setError('Something went wrong. Try again.');
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
       setLoading(false);
     }
   };
