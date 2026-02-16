@@ -4,6 +4,7 @@
 create table games (
   id uuid primary key default gen_random_uuid(),
   code text unique not null,
+  host_pin text,
   status text not null default 'lobby' check (status in ('lobby', 'active', 'grading', 'revealing', 'finished')),
   current_question int not null default 0,
   created_at timestamp with time zone default now()

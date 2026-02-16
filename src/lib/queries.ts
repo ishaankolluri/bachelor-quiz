@@ -3,10 +3,10 @@ import { Game, Question, Player, Answer, GameStatus } from './types';
 
 // ── Games ──
 
-export async function createGame(code: string): Promise<Game> {
+export async function createGame(code: string, hostPin: string): Promise<Game> {
   const { data, error } = await supabase
     .from('games')
-    .insert({ code: code.toUpperCase() })
+    .insert({ code: code.toUpperCase(), host_pin: hostPin })
     .select()
     .single();
   if (error) throw error;

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createGame, getGameByCode, joinGame } from '@/lib/queries';
+import { getGameByCode, joinGame } from '@/lib/queries';
+import { createHostGame } from './actions';
 
 export default function Home() {
   const router = useRouter();
@@ -10,6 +11,8 @@ export default function Home() {
   const [name, setName] = useState('');
   const [gameCode, setGameCode] = useState('');
   const [error, setError] = useState('');
+  const [masterPin, setMasterPin] = useState('');
+  const [hostPin, setHostPin] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleJoin = async (e: React.FormEvent) => {
@@ -45,10 +48,16 @@ export default function Home() {
     setError('');
     setLoading(true);
     try {
-      // Generate a random 4-char code
-      const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const game = await createGame(code);
-      router.push(`/host/${game.id}`);
+      const result = await createHostGame(masterPin, hostPin);
+      if ('error' in result) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+      const { gameId } = result;
+      // Store host PIN in sessionStorage so host doesn't need to re-enter
+      sessionStorage.setItem(`host_pin_${gameId}`, hostPin);
+      router.push(`/host/${gameId}`);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
@@ -120,12 +129,30 @@ export default function Home() {
 
         {mode === 'host' && (
           <form onSubmit={handleCreateGame} className="space-y-3">
-            <p className="text-center text-foreground/60">
-              Create a new game and share the code with your players.
-            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={masterPin}
+              onChange={(e) => setMasterPin(e.target.value)}
+              placeholder="Master PIN"
+              required
+              autoFocus
+              maxLength={8}
+              className="w-full rounded-lg border border-card-border bg-card px-4 py-3 text-center text-2xl font-bold tracking-widest text-foreground placeholder-foreground/30 outline-none focus:border-accent"
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={hostPin}
+              onChange={(e) => setHostPin(e.target.value)}
+              placeholder="Host PIN for this game"
+              required
+              maxLength={8}
+              className="w-full rounded-lg border border-card-border bg-card px-4 py-3 text-center text-2xl font-bold tracking-widest text-foreground placeholder-foreground/30 outline-none focus:border-accent"
+            />
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !masterPin.trim() || !hostPin.trim()}
               className="w-full rounded-full bg-accent py-3 text-lg font-bold text-white transition-colors hover:bg-accent-dark disabled:opacity-40"
             >
               {loading ? 'Creating...' : 'Create Game'}

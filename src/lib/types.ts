@@ -3,6 +3,7 @@ export type GameStatus = 'lobby' | 'active' | 'grading' | 'revealing' | 'finishe
 export interface Game {
   id: string;
   code: string;
+  host_pin: string;
   status: GameStatus;
   current_question: number;
   created_at: string;

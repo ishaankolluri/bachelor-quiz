@@ -7,8 +7,6 @@ import {
   getGame,
   getQuestions,
   getPlayers,
-  addQuestion,
-  deleteQuestion,
   updateGameStatus,
   getAnswersForQuestion,
   gradeAnswer,
@@ -26,32 +24,29 @@ interface AnswerWithPlayer extends Answer {
   player: Player;
 }
 
-const MOCK_QUESTIONS = [
-  { text: "What is her favorite movie?", answer: "The Notebook" },
-  { text: "What was her first job?", answer: "Babysitting" },
-  { text: "What is her go-to coffee order?", answer: "Iced oat latte" },
-  { text: "What city was she born in?", answer: "Chicago" },
-  { text: "What is her biggest pet peeve?", answer: "Loud chewing" },
-  { text: "What is her dream vacation destination?", answer: "Amalfi Coast" },
-  { text: "What is her favorite food?", answer: "Sushi" },
-  { text: "What does she do when she's stressed?", answer: "Takes a bath" },
-  { text: "What is her hidden talent?", answer: "Singing" },
-  { text: "What did she say when Ishaan first asked her out?", answer: "About time" },
-];
-
 export default function HostPage() {
   const params = useParams();
   const gameId = params.gameId as string;
+
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
 
   const [game, setGame] = useState<Game | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [answers, setAnswers] = useState<AnswerWithPlayer[]>([]);
-  const [newQuestion, setNewQuestion] = useState('');
-  const [newAnswer, setNewAnswer] = useState('');
   const [loading, setLoading] = useState(true);
 
   const currentQuestion = questions[game?.current_question ?? 0] ?? null;
+
+  // Check sessionStorage for existing PIN verification
+  useEffect(() => {
+    const stored = sessionStorage.getItem(`host_pin_${gameId}`);
+    if (stored) {
+      setPinVerified(true);
+    }
+  }, [gameId]);
 
   const loadData = useCallback(async () => {
     const [g, q, p] = await Promise.all([
@@ -120,28 +115,16 @@ export default function HostPage() {
     return () => clearInterval(interval);
   }, [currentQuestion?.id, game?.status, gameId]);
 
-  const handleAddQuestion = async (e: React.FormEvent) => {
+  const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newQuestion.trim()) return;
-    await addQuestion(gameId, newQuestion.trim(), newAnswer.trim(), questions.length);
-    setNewQuestion('');
-    setNewAnswer('');
-    const q = await getQuestions(gameId);
-    setQuestions(q);
-  };
-
-  const handleLoadMockQuestions = async () => {
-    for (let i = 0; i < MOCK_QUESTIONS.length; i++) {
-      await addQuestion(gameId, MOCK_QUESTIONS[i].text, MOCK_QUESTIONS[i].answer, questions.length + i);
+    if (!game) return;
+    if (pinInput === game.host_pin) {
+      sessionStorage.setItem(`host_pin_${gameId}`, pinInput);
+      setPinVerified(true);
+      setPinError('');
+    } else {
+      setPinError('Wrong PIN. Try again.');
     }
-    const q = await getQuestions(gameId);
-    setQuestions(q);
-  };
-
-  const handleDeleteQuestion = async (qId: string) => {
-    await deleteQuestion(qId);
-    const q = await getQuestions(gameId);
-    setQuestions(q);
   };
 
   const handleStartGame = async () => {
@@ -152,14 +135,12 @@ export default function HostPage() {
 
   const handleGrade = async (answerId: string, isCorrect: boolean) => {
     await gradeAnswer(answerId, isCorrect);
-    // Update local state immediately
     setAnswers((prev) =>
       prev.map((a) => (a.id === answerId ? { ...a, is_correct: isCorrect } : a))
     );
   };
 
   const handleFinishGrading = async () => {
-    // Update scores for correct answers
     for (const answer of answers) {
       if (answer.is_correct) {
         const player = players.find((p) => p.id === answer.player_id);
@@ -168,7 +149,6 @@ export default function HostPage() {
         }
       }
     }
-    // Refresh players to get updated scores
     const updatedPlayers = await getPlayers(gameId);
     setPlayers(updatedPlayers);
     await updateGameStatus(gameId, 'revealing');
@@ -178,13 +158,11 @@ export default function HostPage() {
   const handleNextQuestion = async () => {
     const nextIdx = (game?.current_question ?? 0) + 1;
     if (nextIdx >= questions.length) {
-      // Game over
       await updateGameStatus(gameId, 'finished');
       setGame((prev) => prev ? { ...prev, status: 'finished' } : prev);
     } else {
       await updateGameStatus(gameId, 'active', nextIdx);
       setGame((prev) => prev ? { ...prev, status: 'active', current_question: nextIdx } : prev);
-      // Load answers for next question
       const a = await getAnswersForQuestion(questions[nextIdx].id);
       setAnswers(a);
     }
@@ -193,7 +171,6 @@ export default function HostPage() {
   const handleMoveToGrading = async () => {
     await updateGameStatus(gameId, 'grading');
     setGame((prev) => prev ? { ...prev, status: 'grading' } : prev);
-    // Reload answers
     if (currentQuestion) {
       const a = await getAnswersForQuestion(currentQuestion.id);
       setAnswers(a);
@@ -238,74 +215,55 @@ export default function HostPage() {
     );
   }
 
+  // PIN gate — show PIN entry before any host content
+  if (!pinVerified) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <h1 className="mb-2 text-center text-2xl font-bold">Host Access</h1>
+          <p className="mb-6 text-center text-foreground/60">
+            Enter the host PIN to continue.
+          </p>
+          <form onSubmit={handlePinSubmit} className="space-y-3">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              placeholder="PIN"
+              autoFocus
+              maxLength={8}
+              className="w-full rounded-lg border border-card-border bg-card px-4 py-3 text-center text-2xl font-bold tracking-widest text-foreground placeholder-foreground/30 outline-none focus:border-accent"
+            />
+            <button
+              type="submit"
+              disabled={!pinInput.trim()}
+              className="w-full rounded-full bg-accent py-3 text-lg font-bold text-white transition-colors hover:bg-accent-dark disabled:opacity-40"
+            >
+              Enter
+            </button>
+            {pinError && (
+              <p className="text-center text-sm text-danger">{pinError}</p>
+            )}
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center p-6">
       <div className="mb-4 w-full max-w-lg">
         <p className="text-center text-sm text-foreground/40">HOST VIEW</p>
       </div>
 
-      {/* LOBBY: Manage questions and wait for players */}
+      {/* LOBBY: Show question count, players, and start button */}
       {game.status === 'lobby' && (
         <div className="w-full max-w-lg space-y-6">
-          {/* Questions management */}
-          <div>
-            <h2 className="mb-3 text-lg font-semibold">Questions ({questions.length})</h2>
-            <div className="space-y-2">
-              {questions.map((q, i) => (
-                <div key={q.id} className="flex items-center justify-between rounded-lg border border-card-border bg-card px-4 py-3">
-                  <div>
-                    <span className="text-sm text-foreground/40">{i + 1}.</span>{' '}
-                    <span>{q.text}</span>
-                    {q.correct_answer && (
-                      <p className="text-sm text-accent/60">Answer: {q.correct_answer}</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleDeleteQuestion(q.id)}
-                    className="ml-2 text-sm text-foreground/30 hover:text-danger"
-                    title="Delete question"
-                  >
-                    🗑
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {questions.length === 0 && (
-              <button
-                onClick={handleLoadMockQuestions}
-                className="w-full rounded-lg border border-dashed border-card-border py-4 text-foreground/40 hover:border-accent hover:text-accent"
-              >
-                Load 10 mock questions
-              </button>
-            )}
-
-            <form onSubmit={handleAddQuestion} className="mt-3 space-y-2">
-              <input
-                type="text"
-                value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
-                placeholder="New question..."
-                className="w-full rounded-lg border border-card-border bg-card px-4 py-2 text-foreground placeholder-foreground/30 outline-none focus:border-accent"
-              />
-              <input
-                type="text"
-                value={newAnswer}
-                onChange={(e) => setNewAnswer(e.target.value)}
-                placeholder="Expected answer (for your reference)"
-                className="w-full rounded-lg border border-card-border bg-card px-4 py-2 text-sm text-foreground placeholder-foreground/30 outline-none focus:border-accent"
-              />
-              <button
-                type="submit"
-                disabled={!newQuestion.trim()}
-                className="w-full rounded-full bg-card py-2 text-sm font-bold transition-colors hover:bg-card-border disabled:opacity-40"
-              >
-                Add Question
-              </button>
-            </form>
+          <div className="rounded-lg border border-card-border bg-card px-4 py-4 text-center">
+            <p className="text-lg font-semibold">{questions.length} questions loaded</p>
           </div>
 
-          {/* Waiting room */}
           <WaitingRoom
             players={players}
             gameCode={game.code}
