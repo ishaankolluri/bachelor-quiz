@@ -21,7 +21,7 @@ export default function Leaderboard({ players, title = 'Leaderboard', showContin
             key={player.id}
             className={`flex items-center justify-between rounded-lg border px-4 py-3 ${
               i === 0
-                ? 'border-yellow-500/50 bg-yellow-500/10'
+                ? 'border-gold/50 bg-gold/10'
                 : 'border-card-border bg-card'
             }`}
           >

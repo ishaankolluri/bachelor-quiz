@@ -105,14 +105,22 @@ export default function HostPage() {
     return () => { supabase.removeChannel(answerSub); };
   }, [currentQuestion?.id]);
 
-  // Polling fallback: refresh answers every 3s during active/grading
+  // Polling fallback: refresh players during lobby, answers+players during active/grading
   useEffect(() => {
-    if (!currentQuestion || !game || (game.status !== 'active' && game.status !== 'grading')) return;
-    const interval = setInterval(() => {
-      getAnswersForQuestion(currentQuestion.id).then(setAnswers);
-      getPlayers(gameId).then(setPlayers);
-    }, 3000);
-    return () => clearInterval(interval);
+    if (!game) return;
+    if (game.status === 'lobby') {
+      const interval = setInterval(() => {
+        getPlayers(gameId).then(setPlayers);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+    if ((game.status === 'active' || game.status === 'grading') && currentQuestion) {
+      const interval = setInterval(() => {
+        getAnswersForQuestion(currentQuestion.id).then(setAnswers);
+        getPlayers(gameId).then(setPlayers);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
   }, [currentQuestion?.id, game?.status, gameId]);
 
   const handlePinSubmit = (e: React.FormEvent) => {

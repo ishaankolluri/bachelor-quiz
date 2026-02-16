@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Instrument_Serif } from "next/font/google";
 import "./globals.css";
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Bachelor Quiz",
@@ -13,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={GeistSans.className}>
+    <html lang="en" className={instrumentSerif.className}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
       </body>

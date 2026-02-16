@@ -21,7 +21,7 @@ export default function FinalResults({ players, onReset, isHost }: FinalResultsP
       {firstPlace && (
         <div className="text-center">
           <p className="text-6xl">👑</p>
-          <p className="mt-2 text-2xl font-bold text-yellow-400">{firstPlace.name}</p>
+          <p className="mt-2 text-2xl font-bold text-gold">{firstPlace.name}</p>
           <p className="text-lg text-foreground/60">{firstPlace.score} points — Winner!</p>
         </div>
       )}
@@ -35,7 +35,7 @@ export default function FinalResults({ players, onReset, isHost }: FinalResultsP
               player.id === lastPlace?.id
                 ? 'border-danger/50 bg-danger/10'
                 : i === 0
-                ? 'border-yellow-500/50 bg-yellow-500/10'
+                ? 'border-gold/50 bg-gold/10'
                 : 'border-card-border bg-card'
             }`}
           >
