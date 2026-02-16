@@ -12,7 +12,6 @@ export default function Home() {
   const [gameCode, setGameCode] = useState('');
   const [error, setError] = useState('');
   const [masterPin, setMasterPin] = useState('');
-  const [hostPin, setHostPin] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleJoin = async (e: React.FormEvent) => {
@@ -48,15 +47,15 @@ export default function Home() {
     setError('');
     setLoading(true);
     try {
-      const result = await createHostGame(masterPin, hostPin);
+      const result = await createHostGame(masterPin);
       if ('error' in result) {
         setError(result.error);
         setLoading(false);
         return;
       }
       const { gameId } = result;
-      // Store host PIN in sessionStorage so host doesn't need to re-enter
-      sessionStorage.setItem(`host_pin_${gameId}`, hostPin);
+      // Store PIN in sessionStorage so host doesn't need to re-enter on host page
+      sessionStorage.setItem(`host_pin_${gameId}`, masterPin);
       router.push(`/host/${gameId}`);
     } catch (err) {
       console.error(err);
@@ -134,25 +133,15 @@ export default function Home() {
               inputMode="numeric"
               value={masterPin}
               onChange={(e) => setMasterPin(e.target.value)}
-              placeholder="Master PIN"
+              placeholder="Host PIN"
               required
               autoFocus
               maxLength={8}
               className="w-full rounded-lg border border-card-border bg-card px-4 py-3 text-center text-2xl font-bold tracking-widest text-foreground placeholder-foreground/30 outline-none focus:border-accent"
             />
-            <input
-              type="text"
-              inputMode="numeric"
-              value={hostPin}
-              onChange={(e) => setHostPin(e.target.value)}
-              placeholder="Host PIN for this game"
-              required
-              maxLength={8}
-              className="w-full rounded-lg border border-card-border bg-card px-4 py-3 text-center text-2xl font-bold tracking-widest text-foreground placeholder-foreground/30 outline-none focus:border-accent"
-            />
             <button
               type="submit"
-              disabled={loading || !masterPin.trim() || !hostPin.trim()}
+              disabled={loading || !masterPin.trim()}
               className="w-full rounded-full bg-accent py-3 text-lg font-bold text-white transition-colors hover:bg-accent-dark disabled:opacity-40"
             >
               {loading ? 'Creating...' : 'Create Game'}
